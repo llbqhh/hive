@@ -114,6 +114,7 @@ public class CLIService extends CompositeService implements ICLIService {
       throw new RuntimeException("Error applying authorization policy on hive configuration: "
           + e.getMessage(), e);
     }
+    //初始化自定义函数
     setupBlockedUdfs();
     super.init(hiveConf);
   }

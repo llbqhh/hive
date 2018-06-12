@@ -89,7 +89,7 @@ public class HiveServer2 extends CompositeService {
 
   @Override
   public synchronized void init(HiveConf hiveConf) {
-    cliService = new CLIService(this);
+        cliService = new CLIService(this);
     addService(cliService);
     if (isHTTPTransportMode(hiveConf)) {
       thriftCLIService = new ThriftHttpCLIService(cliService);
@@ -97,6 +97,10 @@ public class HiveServer2 extends CompositeService {
       thriftCLIService = new ThriftBinaryCLIService(cliService);
     }
     addService(thriftCLIService);
+
+    //对cliService和thriftCLIService进行init操作
+    //cliService (会调用setupBlockedUDFs) ==> SessionManager (会调用createBackGroupOperationPool) ==> OperationManager
+    //thriftCLIService ==> ThriftCLIService.init()
     super.init(hiveConf);
 
     // Add a shutdown hook for catching SIGTERM & SIGINT
@@ -341,9 +345,19 @@ public class HiveServer2 extends CompositeService {
       maxAttempts = hiveConf.getLongVar(HiveConf.ConfVars.HIVE_SERVER2_MAX_START_ATTEMPTS);
       HiveServer2 server = null;
       try {
+        //启动hiveServre2
         server = new HiveServer2();
+
+        //初始化各个server
         server.init(hiveConf);
+
+        //各server.start
+        // cliService 测试metastore的连通性
+        // SessionManager 启动过期session清理线程（使用backgroundOperationPool启动此线程）
+        // thriftCliService 启动TThreadPoolServer(传入ThreadPoolExecutor 5~500 workers)
         server.start();
+
+        //启动一个jvm检查器，检查jvm或机器是否有过暂停（短时间挂起）
         ShimLoader.getHadoopShims().startPauseMonitor(hiveConf);
         // If we're supporting dynamic service discovery, we'll add the service uri for this
         // HiveServer2 instance to Zookeeper as a znode.
@@ -370,6 +384,7 @@ public class HiveServer2 extends CompositeService {
             server = null;
           }
         }
+        //尝试启动次数超过一定次数，抛异常退出
         if (++attempts >= maxAttempts) {
           throw new Error("Max start attempts " + maxAttempts + " exhausted", throwable);
         } else {
@@ -445,6 +460,7 @@ public class HiveServer2 extends CompositeService {
   public static void main(String[] args) {
     HiveConf.setLoadHiveServer2Config(true);
     try {
+      //1、参数解析  Process arguments given to HiveServer2 (-hiveconf property=value)
       ServerOptionsProcessor oproc = new ServerOptionsProcessor("hiveserver2");
       ServerOptionsProcessorResponse oprocResponse = oproc.parse(args);
 
@@ -528,6 +544,7 @@ public class HiveServer2 extends CompositeService {
         System.exit(-1);
       }
       // Default executor, when no option is specified
+      //默认启动HiveServer2 调用startHiveServer2方法
       return new ServerOptionsProcessorResponse(new StartOptionExecutor());
     }
 

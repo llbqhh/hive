@@ -146,6 +146,7 @@ public class SessionManager extends CompositeService {
   public synchronized void start() {
     super.start();
     if (checkInterval > 0) {
+      //启动过期session清理线程
       startTimeoutChecker();
     }
   }
