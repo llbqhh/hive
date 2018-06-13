@@ -23,8 +23,10 @@ esac
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
+# 调用hive-config设置HIVE_HOME等环境变量
 . "$bin"/hive-config.sh
 
+# 确定SERVICE
 SERVICE=""
 HELP=""
 while [ $# -gt 0 ]; do
@@ -72,6 +74,7 @@ if [ -f "${HIVE_CONF_DIR}/hive-env.sh" ]; then
   . "${HIVE_CONF_DIR}/hive-env.sh"
 fi
 
+# 取SPARK_HOME
 if [[ -z "$SPARK_HOME" ]]
 then
   bin=`dirname "$0"`
@@ -300,3 +303,5 @@ if [ "$TORUN" = "" ] ; then
 else
   $TORUN "$@"
 fi
+
+# 最后执行的是ext目录下的相应的文件，如metastore.sh等
