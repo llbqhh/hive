@@ -293,7 +293,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
                                      // right now they come from jpox.properties
 
     private static String currentUrl;
-
+    //用于处理hive表和dfs路径之间关系
     private Warehouse wh; // hdfs warehouse
     private static final ThreadLocal<RawStore> threadLocalMS =
         new ThreadLocal<RawStore>() {
@@ -441,6 +441,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
     @Override
     public void init() throws MetaException {
+      //ObjectStore
       rawStoreClassName = hiveConf.getVar(HiveConf.ConfVars.METASTORE_RAW_STORE_IMPL);
       initListeners = MetaStoreUtils.getMetaStoreListeners(
           MetaStoreInitListener.class, hiveConf,
@@ -5863,11 +5864,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
    */
   public static void main(String[] args) throws Throwable {
     HiveConf.setLoadMetastoreConfig(true);
+    //初始化参数，默认port9083也是在HiveMetastoreCli初始化
     HiveMetastoreCli cli = new HiveMetastoreCli();
     cli.parse(args);
     final boolean isCliVerbose = cli.isVerbose();
     // NOTE: It is critical to do this prior to initializing log4j, otherwise
     // any log specific settings via hiveconf will be ignored
+    //把hiveconf的配置都写入Java system properties
     Properties hiveconf = cli.addHiveconfToSystemProperties();
 
     // If the log4j.configuration property hasn't already been explicitly set,
@@ -5891,6 +5894,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
       HiveConf conf = new HiveConf(HMSHandler.class);
 
+      //所有在命令行通过hiveconf设置的参数，都加到hiveConf里
       // set all properties specified on the command line
       for (Map.Entry<Object, Object> item : hiveconf.entrySet()) {
         conf.set((String) item.getKey(), (String) item.getValue());
@@ -5911,7 +5915,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       Lock startLock = new ReentrantLock();
       Condition startCondition = startLock.newCondition();
       AtomicBoolean startedServing = new AtomicBoolean();
+      //压缩相关线程启动（实际是在metastore启动后才启动的，具体看实现）
       startMetaStoreThreads(conf, startLock, startCondition, startedServing);
+      //启动metastore
       startMetaStore(cli.port, ShimLoader.getHadoopThriftAuthBridge(), conf, startLock,
           startCondition, startedServing);
     } catch (Throwable t) {
@@ -5963,6 +5969,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       // Server will create new threads up to max as necessary. After an idle
       // period, it will destroy threads to keep the number of threads in the
       // pool to min.
+      //初始化参数，通信最大数据量（默认100m），最小最大线程数（默认200~1000）等
       int maxMessageSize = conf.getIntVar(HiveConf.ConfVars.METASTORESERVERMAXMESSAGESIZE);
       int minWorkerThreads = conf.getIntVar(HiveConf.ConfVars.METASTORESERVERMINTHREADS);
       int maxWorkerThreads = conf.getIntVar(HiveConf.ConfVars.METASTORESERVERMAXTHREADS);
@@ -5985,6 +5992,8 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         protocolFactory = new TBinaryProtocol.Factory();
         inputProtoFactory = new TBinaryProtocol.Factory(true, true, maxMessageSize, maxMessageSize);
       }
+
+      //创建HMSHandler，用来  ？
       HMSHandler baseHandler = new HiveMetaStore.HMSHandler("new db based metaserver", conf,
           false);
       IHMSHandler handler = newRetryingHMSHandler(baseHandler, conf);
@@ -6029,6 +6038,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           .minWorkerThreads(minWorkerThreads)
           .maxWorkerThreads(maxWorkerThreads);
 
+      //初始化tServer
       TServer tServer = new TThreadPoolServer(args);
       HMSHandler.LOG.info("Started the new metaserver on port [" + port
           + "]...");
@@ -6038,9 +6048,11 @@ public class HiveMetaStore extends ThriftHiveMetastore {
           + maxWorkerThreads);
       HMSHandler.LOG.info("TCP keepalive = " + tcpKeepAlive);
 
+      //唤醒startMetaStoreThreads中的其他线程
       if (startLock != null) {
         signalOtherThreadsToStart(tServer, startLock, startCondition, startedServing);
       }
+      //启动tServer
       tServer.serve();
     } catch (Throwable x) {
       x.printStackTrace();

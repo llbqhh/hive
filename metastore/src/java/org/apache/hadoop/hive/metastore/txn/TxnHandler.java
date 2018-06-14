@@ -88,6 +88,7 @@ public class TxnHandler {
   protected int deadlockCnt;
   private long deadlockRetryInterval;
   protected HiveConf conf;
+  //数据库类型 mysql sqlserver等
   protected DatabaseProduct dbProduct;
 
   // (End user) Transaction timeout, in milliseconds.

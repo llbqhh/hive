@@ -61,10 +61,12 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class Warehouse {
   private Path whRoot;
   private final Configuration conf;
+  //warehouse的hdfs根目录
   private final String whRootString;
 
   public static final Log LOG = LogFactory.getLog("hive.metastore.warehouse");
 
+  //用于删除hdfs目录的工具类
   private MetaStoreFS fsHandler = null;
   private boolean storageAuthCheck = false;
 
