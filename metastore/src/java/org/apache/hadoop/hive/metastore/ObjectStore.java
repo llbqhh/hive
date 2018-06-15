@@ -203,6 +203,7 @@ public class ObjectStore implements RawStore, Configurable {
 
 
   private boolean isInitialized = false;
+  //这里用的JDOPersistenceManager
   private PersistenceManager pm = null;
   private MetaStoreDirectSql directSql = null;
   private PartitionExpressionProxy expressionProxy = null;
@@ -518,6 +519,7 @@ public class ObjectStore implements RawStore, Configurable {
     mdb.setOwnerType((null == ownerType ? PrincipalType.USER.name() : ownerType.name()));
     try {
       openTransaction();
+      //持久化
       pm.makePersistent(mdb);
       commited = commitTransaction();
     } finally {

@@ -25,6 +25,10 @@
   Non-indexed VARCHAR: 4000 bytes (max length on Oracle 9i/10g/11g)
 
 -->
+
+<!--
+    metastore初始化时，如果这里的数据库定义（例如索引）和metastore数据库中的不一样，则会以这里的为准再创建
+-->
 <jdo>  
   <package name="org.apache.hadoop.hive.metastore.model">  
     <class name="MDatabase" identity-type="datastore" table="DBS" detachable="true">  

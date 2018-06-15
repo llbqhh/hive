@@ -285,9 +285,13 @@ public class HiveMetaStore extends ThriftHiveMetastore {
     }
   }
 
+  /**
+   * fuck HiveMetastoreHandler
+   */
   public static class HMSHandler extends FacebookBase implements
       IHMSHandler {
     public static final Log LOG = HiveMetaStore.LOG;
+    //使用的ObjectStore
     private String rawStoreClassName;
     private final HiveConf hiveConf; // stores datastore (jpox) properties,
                                      // right now they come from jpox.properties
@@ -441,8 +445,9 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
     @Override
     public void init() throws MetaException {
-      //ObjectStore
+      //默认使用的ObjectStore
       rawStoreClassName = hiveConf.getVar(HiveConf.ConfVars.METASTORE_RAW_STORE_IMPL);
+      //如果有自定义的listerner，可以在这里初始化，默认是没有的
       initListeners = MetaStoreUtils.getMetaStoreListeners(
           MetaStoreInitListener.class, hiveConf,
           hiveConf.getVar(HiveConf.ConfVars.METASTORE_INIT_HOOKS));
@@ -453,19 +458,26 @@ public class HiveMetaStore extends ThriftHiveMetastore {
 
       String alterHandlerName = hiveConf.get("hive.metastore.alter.impl",
           HiveAlterHandler.class.getName());
+      //用于alter table，alter partition等操作，默认是HiveAlterHandler
       alterHandler = (AlterHandler) ReflectionUtils.newInstance(MetaStoreUtils.getClass(
           alterHandlerName), hiveConf);
+      //用于处理hive表和dfs路径之间关系
       wh = new Warehouse(hiveConf);
 
       synchronized (HMSHandler.class) {
         if (currentUrl == null || !currentUrl.equals(MetaStoreInit.getConnectionURL(hiveConf))) {
+          //初始化defautl库
           createDefaultDB();
+          //初始化admin和public角色，并给admin授权
           createDefaultRoles();
+          //增加初始化的admin用户，可以在hive.users.in.admin.role里配置
           addAdminUsers();
+          //metastore数据库url，用于存储metastore相关数据表等
           currentUrl = MetaStoreInit.getConnectionURL(hiveConf);
         }
       }
 
+      //监控信息，可选
       if (hiveConf.getBoolean("hive.metastore.metrics.enabled", false)) {
         try {
           Metrics.init();
@@ -476,16 +488,21 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         }
       }
 
+      //每个metastore事件发生【前】会调用的方法，参见firePreEvent方法，几乎会在每个方法中调用
       preListeners = MetaStoreUtils.getMetaStoreListeners(MetaStorePreEventListener.class,
           hiveConf,
           hiveConf.getVar(HiveConf.ConfVars.METASTORE_PRE_EVENT_LISTENERS));
+      //每个metastore事件发生【时】会调用的方法，参见firePreEvent方法，几乎会在每个方法中调用
       listeners = MetaStoreUtils.getMetaStoreListeners(MetaStoreEventListener.class, hiveConf,
           hiveConf.getVar(HiveConf.ConfVars.METASTORE_EVENT_LISTENERS));
+      //增加一个可以修改hive.metastore.client.socket.timeout参数的listener
       listeners.add(new SessionPropertiesListener(hiveConf));
+      //每个metastore事件发生【后】会调用的方法，参见firePreEvent方法，几乎会在每个方法中调用
       endFunctionListeners = MetaStoreUtils.getMetaStoreListeners(
           MetaStoreEndFunctionListener.class, hiveConf,
           hiveConf.getVar(HiveConf.ConfVars.METASTORE_END_FUNCTION_LISTENERS));
 
+      //partition必须满足指定的正则表达式才可以使用
       String partitionValidationRegex =
           hiveConf.getVar(HiveConf.ConfVars.METASTORE_PARTITION_NAME_WHITELIST_PATTERN);
       if (partitionValidationRegex != null && !partitionValidationRegex.isEmpty()) {
@@ -494,6 +511,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
         partitionValidationPattern = null;
       }
 
+      //定时清除超时的Event，默认没有开启
       long cleanFreq = hiveConf.getTimeVar(ConfVars.METASTORE_EVENT_CLEAN_FREQ, TimeUnit.MILLISECONDS);
       if (cleanFreq > 0) {
         // In default config, there is no timer.
@@ -598,10 +616,12 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       try {
         ms.getDatabase(DEFAULT_DATABASE_NAME);
       } catch (NoSuchObjectException e) {
+        //如果没有的话创建默认的defautl库
         Database db = new Database(DEFAULT_DATABASE_NAME, DEFAULT_DATABASE_COMMENT,
           wh.getDefaultDatabasePath(DEFAULT_DATABASE_NAME).toString(), null);
         db.setOwnerName(PUBLIC);
         db.setOwnerType(PrincipalType.ROLE);
+        //调用持久化框架
         ms.createDatabase(db);
       }
     }
@@ -5996,6 +6016,7 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       //创建HMSHandler，用来  ？
       HMSHandler baseHandler = new HiveMetaStore.HMSHandler("new db based metaserver", conf,
           false);
+      //这个方法中调用了HMSHandler的init方法
       IHMSHandler handler = newRetryingHMSHandler(baseHandler, conf);
       if (useSasl) {
         // we are in secure mode.
