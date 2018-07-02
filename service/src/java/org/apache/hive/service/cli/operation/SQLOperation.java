@@ -107,6 +107,7 @@ public class SQLOperation extends ExecuteStatementOperation {
       driver.setTryCount(Integer.MAX_VALUE);
 
       String subStatement = new VariableSubstitution().substitute(sqlOperationConf, statement);
+      //编译sql
       response = driver.compileAndRespond(subStatement);
       if (0 != response.getResponseCode()) {
         throw toSQLException("Error while compiling statement", response);

@@ -275,6 +275,7 @@ public final class SemanticAnalyzerFactory {
         return new UpdateDeleteSemanticAnalyzer(conf);
 
       default: {
+        // 默认使用CalcitePlanner
         SemanticAnalyzer semAnalyzer = HiveConf
             .getBoolVar(conf, HiveConf.ConfVars.HIVE_CBO_ENABLED) ? new CalcitePlanner(conf)
             : new SemanticAnalyzer(conf);

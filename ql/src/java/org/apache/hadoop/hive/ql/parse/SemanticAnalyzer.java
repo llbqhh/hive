@@ -244,6 +244,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
   private final Map<FileSinkOperator, Table> fsopToTable;
   private final List<ReduceSinkOperator> reduceSinkOperatorsAddedByEnforceBucketingSorting;
   private final HashMap<TableScanOperator, Map<String, String>> topToTableProps;
+  // 即Query Block
   private QB qb;
   private ASTNode ast;
   private int destTableId;
@@ -10180,6 +10181,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
     }
 
     // 7. Perform Logical optimization
+    // 逻辑层优化
     if (LOG.isDebugEnabled()) {
       LOG.debug("Before logical optimization\n" + Operator.toString(pCtx.getTopOps().values()));
     }
@@ -10194,6 +10196,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     // 8. Generate column access stats if required - wait until column pruning
     // takes place during optimization
+    // 权限校验
     boolean isColumnInfoNeedForAuth = SessionState.get().isAuthorizationModeV2()
         && HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVE_AUTHORIZATION_ENABLED);
     if (isColumnInfoNeedForAuth
@@ -10204,6 +10207,7 @@ public class SemanticAnalyzer extends BaseSemanticAnalyzer {
 
     // 9. Optimize Physical op tree & Translate to target execution engine (MR,
     // TEZ..)
+    // 物理层优化,转化为mr作业
     if (!ctx.getExplainLogical()) {
       TaskCompiler compiler = TaskCompilerFactory.getCompiler(conf, pCtx);
       compiler.init(conf, console, db);

@@ -394,6 +394,8 @@ public class Driver implements CommandProcessor {
 
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.PARSE);
       ParseDriver pd = new ParseDriver();
+
+      // 词法解析、语法解析、生成AST Tree
       ASTNode tree = pd.parse(command, ctx);
       tree = ParseUtils.findRootNonNullToken(tree);
       perfLogger.PerfLogEnd(CLASS_NAME, PerfLogger.PARSE);
@@ -407,12 +409,15 @@ public class Driver implements CommandProcessor {
       recordValidTxns();
 
       perfLogger.PerfLogBegin(CLASS_NAME, PerfLogger.ANALYZE);
+
+      // 语义分析器
       BaseSemanticAnalyzer sem = SemanticAnalyzerFactory.get(conf, tree);
       List<HiveSemanticAnalyzerHook> saHooks =
           getHooks(HiveConf.ConfVars.SEMANTIC_ANALYZER_HOOK,
               HiveSemanticAnalyzerHook.class);
 
       // Do semantic analysis and plan generation
+      // 如果有hook函数，则可以在语义分析前后执行它们
       if (saHooks != null) {
         HiveSemanticAnalyzerHookContext hookCtx = new HiveSemanticAnalyzerHookContextImpl();
         hookCtx.setConf(conf);
@@ -422,12 +427,14 @@ public class Driver implements CommandProcessor {
         for (HiveSemanticAnalyzerHook hook : saHooks) {
           tree = hook.preAnalyze(hookCtx, tree);
         }
+        // 语义分析(SemanticAnalyzer::analyzeInternal)
         sem.analyze(tree, ctx);
         hookCtx.update(sem);
         for (HiveSemanticAnalyzerHook hook : saHooks) {
           hook.postAnalyze(hookCtx, sem.getRootTasks());
         }
       } else {
+        // 语义分析(SemanticAnalyzer::analyzeInternal)
         sem.analyze(tree, ctx);
       }
       // Record any ACID compliant FileSinkOperators we saw so we can add our transaction ID to
@@ -442,6 +449,7 @@ public class Driver implements CommandProcessor {
 
       // Command should be redacted before passing it to the QueryPlan in order
       // to avoid returning sensitive data
+      // 可以在生成queryPlan前修改sql中的内容，避免返回敏感信息，需要实现Redactor接口
       String queryStr = HookUtils.redactLogString(conf, command);
 
       plan = new QueryPlan(queryStr, sem, perfLogger.getStartTime(PerfLogger.DRIVER_RUN), queryId,

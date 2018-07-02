@@ -1,0 +1,21 @@
+一、sql解析相关
+https://www.cnblogs.com/yaojingang/p/5446310.html
+源码入口：Driver类的compile方法
+
+1，Antlr定义SQL的语法规则，完成SQL词法，语法解析，将SQL转化为抽象语法树AST Tree
+相关g文件都在ql模块中的org.apache.hadoop.hive.ql.parse包中
+一个词法规则文件：HiveLexer.g
+四个语法规则文件：SelectClauseParser.g，FromClauseParser.g，IdentifiersParser.g，HiveParser.g
+
+2，遍历AST Tree，抽象出查询的基本组成单元QueryBlock
+QueryBlock是一条SQL最基本的组成单元，包括三个部分：输入源，计算过程，输出。简单来讲一个QueryBlock就是一个子查询。
+
+3，遍历QueryBlock，翻译为执行操作树OperatorTree
+
+4，逻辑层优化器进行OperatorTree变换，合并不必要的ReduceSinkOperator，减少shuffle数据量
+
+5，遍历OperatorTree，翻译为MapReduce任务
+
+6，物理层优化器进行MapReduce任务的变换，生成最终的执行计划
+
+

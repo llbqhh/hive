@@ -184,6 +184,7 @@ public class ParseDriver {
       throws ParseException {
     LOG.info("Parsing command: " + command);
 
+    //词法解析
     HiveLexerX lexer = new HiveLexerX(new ANTLRNoCaseStringStream(command));
     TokenRewriteStream tokens = new TokenRewriteStream(lexer);
     if (ctx != null) {
@@ -192,6 +193,8 @@ public class ParseDriver {
       }
       lexer.setHiveConf(ctx.getConf());
     }
+
+    //语法解析
     HiveParser parser = new HiveParser(tokens);
     if (ctx != null) {
       parser.setHiveConf(ctx.getConf());
@@ -213,6 +216,7 @@ public class ParseDriver {
       throw new ParseException(parser.errors);
     }
 
+    //转化为AST Tree
     ASTNode tree = (ASTNode) r.getTree();
     tree.setUnknownTokenBoundaries();
     return tree;
@@ -232,11 +236,14 @@ public class ParseDriver {
   public ASTNode parseSelect(String command, Context ctx) throws ParseException {
     LOG.info("Parsing command: " + command);
 
+    //词法解析
     HiveLexerX lexer = new HiveLexerX(new ANTLRNoCaseStringStream(command));
     TokenRewriteStream tokens = new TokenRewriteStream(lexer);
     if (ctx != null) {
       ctx.setTokenRewriteStream(tokens);
     }
+
+    //语法解析
     HiveParser parser = new HiveParser(tokens);
     parser.setTreeAdaptor(adaptor);
     HiveParser_SelectClauseParser.selectClause_return r = null;
@@ -255,6 +262,7 @@ public class ParseDriver {
       throw new ParseException(parser.errors);
     }
 
+    //转化为AST Tree
     return (ASTNode) r.getTree();
   }
 }

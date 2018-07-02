@@ -66,7 +66,7 @@ public class SystemVariables {
     return expr == null ? null : new SystemVariables().substitute(conf, expr, 1);
   }
 
-  protected final String substitute(Configuration conf, String expr, int depth) {
+  protected final String  substitute(Configuration conf, String expr, int depth) {
     Matcher match = varPat.matcher("");
     String eval = expr;
     StringBuilder builder = new StringBuilder();
